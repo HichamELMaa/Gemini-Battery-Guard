@@ -1,42 +1,47 @@
 import psutil
 import time
 from plyer import notification
-import google.generativeai as genai
 import os
 from dotenv import load_dotenv 
-
+from google import genai
 
 
 low_alert_sent = False
 mid_alert_sent = False
 high_alert_sent = False
 
-# 1. Load secrets immediately
+# Load environment variables (API Key)
 load_dotenv()
 
 
 def get_ai_message(percent):
-    #try:
-
-        # 1. Setup the key globally (No variable needed here)
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-        # 2. Define the Model (The "Brain")
-        model = genai.GenerativeModel("gemini-2.5-flash")
-
-        # 2.Create the instruction using an f-string
-        # Use the 'percent' variable here!
+    """
+    Fetches a witty battery alert using Google's Gemini 2.5 Flash model.
+    Uses the modern 'google-genai' SDK for future compatibility.
+    """
+    try:
+        # 1. Initialize the modern Client (Stateless & Thread-safe)
+        # We use os.getenv directly here for security  
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        
+        # 2. Dynamic Prompt Engineering
         instruction = f"My laptop battery is at {percent}%. Give me a funny 5-word warning."
 
-        #3. Ask the AI
-        response = model.generate_content(instruction)
+        # 3. Call the Model using the new 'client.models' service
+        # Note: Using 'gemini-2.5-flash' based on latest experimental availability
+        response =client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents= instruction
+        )
 
-        #4. Return the text result
-        return response.text 
-     
-   # except:
-        # Return the backup message if the AI fails
-       # return f"Battery is at {percent}% (AI Offline)"
+        return response.text
+    
+    except Exception as e:
+        # Graceful Error Handling:
+        # If the API fails (internet down, quota exceeded), return a safe backup.
+        # We print the error to the console for debugging, but show the user a clean message.
+        print(f"DEBUG: AI Error -{e}")
+        return f"Battery is at {percent}% (AI Offline)"
 
 
 while True:
